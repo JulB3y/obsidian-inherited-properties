@@ -1,0 +1,17 @@
+.inherited-properties-list {
+	margin-bottom: 1em;
+}
+
+.inherited-property-row {
+	border-bottom: 1px solid var(--background-modifier-border);
+	padding: 0.25em 0;
+}
+
+.inherited-property-row:last-child {
+	border-bottom: none;
+}
+
+.inherited-property-row .setting-item {
+	border: none;
+	padding: 0.5em 0;
+}
