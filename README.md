@@ -34,13 +34,6 @@ project: alpha
 
 ## Installation
 
-### Manual
-
-1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest release](../../releases)
-2. Copy them into `<vault>/.obsidian/plugins/inherited-properties/`
-3. Restart Obsidian or reload community plugins
-4. Enable **Inherited Properties** in Settings → Community Plugins
-
 ### From Source
 
 ```bash
