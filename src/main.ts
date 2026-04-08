@@ -12,8 +12,8 @@ export default class InheritedPropertiesPlugin extends Plugin {
 	async onload(): Promise<void> {
 		await this.loadSettings();
 
-		this.linkDetector = new LinkDetector(this);
-		this.linkDetector.initialize();
+		this.linkDetector = new LinkDetector(this.app);
+		this.linkDetector.initialize((ref) => this.registerEvent(ref));
 
 		this.inheritanceEngine = new InheritanceEngine(this, this.linkDetector);
 

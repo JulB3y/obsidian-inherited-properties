@@ -2,12 +2,21 @@ import type InheritedPropertiesPlugin from "./main";
 
 export class PropertyScanner {
 	private plugin: InheritedPropertiesPlugin;
+	private cachedProperties: string[] | null = null;
 
 	constructor(plugin: InheritedPropertiesPlugin) {
 		this.plugin = plugin;
 	}
 
+	invalidateCache(): void {
+		this.cachedProperties = null;
+	}
+
 	scanVaultProperties(): string[] {
+		if (this.cachedProperties !== null) {
+			return this.cachedProperties;
+		}
+
 		const propertyKeys = new Set<string>();
 		const files = this.plugin.app.vault.getMarkdownFiles();
 
@@ -25,6 +34,7 @@ export class PropertyScanner {
 			}
 		}
 
-		return Array.from(propertyKeys).sort();
+		this.cachedProperties = Array.from(propertyKeys).sort();
+		return this.cachedProperties;
 	}
 }

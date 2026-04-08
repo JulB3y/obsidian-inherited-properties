@@ -1,15 +1,14 @@
 import { App, AbstractInputSuggest } from "obsidian";
 import { PropertyScanner } from "./PropertyScanner";
-import type InheritedPropertiesPlugin from "./main";
 
 export class PropertySuggest extends AbstractInputSuggest<string> {
 	private propertyScanner: PropertyScanner;
 	private inputEl: HTMLInputElement;
 
-	constructor(app: App, plugin: InheritedPropertiesPlugin, inputEl: HTMLInputElement) {
+	constructor(app: App, propertyScanner: PropertyScanner, inputEl: HTMLInputElement) {
 		super(app, inputEl);
 		this.inputEl = inputEl;
-		this.propertyScanner = new PropertyScanner(plugin);
+		this.propertyScanner = propertyScanner;
 	}
 
 	getSuggestions(query: string): string[] {

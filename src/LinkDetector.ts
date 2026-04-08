@@ -1,22 +1,24 @@
-import { TFile } from "obsidian";
-import type InheritedPropertiesPlugin from "./main";
+import { App, EventRef, TFile } from "obsidian";
+
+interface CachedLink {
+	link: string;
+}
 
 export class LinkDetector {
-	private plugin: InheritedPropertiesPlugin;
+	private app: App;
 	private lastActiveFile: TFile | null = null;
 
-	constructor(plugin: InheritedPropertiesPlugin) {
-		this.plugin = plugin;
+	constructor(app: App) {
+		this.app = app;
 	}
 
-	initialize(): void {
-		this.plugin.registerEvent(
-			this.plugin.app.workspace.on("file-open", (file: TFile | null) => {
-				if (file && file.extension === "md") {
-					this.lastActiveFile = file;
-				}
-			})
-		);
+	initialize(registerEvent: (eventRef: EventRef) => void): void {
+		const ref = this.app.workspace.on("file-open", (file: TFile | null) => {
+			if (file && file.extension === "md") {
+				this.lastActiveFile = file;
+			}
+		});
+		registerEvent(ref);
 	}
 
 	getLastActiveFile(): TFile | null {
@@ -24,31 +26,39 @@ export class LinkDetector {
 	}
 
 	hasLinkTo(parentFile: TFile, targetFile: TFile): boolean {
-		const cache = this.plugin.app.metadataCache.getFileCache(parentFile);
+		const cache = this.app.metadataCache.getFileCache(parentFile);
 		if (!cache) return false;
 
-		const allLinks = [...(cache.links ?? []), ...(cache.embeds ?? [])];
 		const targetBasename = targetFile.basename;
+		const targetPath = targetFile.path;
+		const targetName = targetFile.name;
 
-		for (const link of allLinks) {
-			if (
-				link.link === targetBasename ||
-				link.link === targetFile.path ||
-				link.link === targetFile.name ||
-				link.link.replace(/\.md$/, "") === targetBasename
-			) {
-				return true;
+		const checkLinks = (links: CachedLink[] | undefined): boolean => {
+			if (!links) return false;
+			for (const link of links) {
+				const raw = link.link;
+				if (
+					raw === targetBasename ||
+					raw === targetPath ||
+					raw === targetName ||
+					raw.replace(/\.md$/, "") === targetBasename
+				) {
+					return true;
+				}
+				const resolved =
+					this.app.metadataCache.getFirstLinkpathDest(
+						raw,
+						parentFile.path
+					);
+				if (resolved && resolved.path === targetPath) {
+					return true;
+				}
 			}
+			return false;
+		};
 
-			const resolved =
-				this.plugin.app.metadataCache.getFirstLinkpathDest(
-					link.link,
-					parentFile.path
-				);
-			if (resolved && resolved.path === targetFile.path) {
-				return true;
-			}
-		}
+		if (checkLinks(cache.links as CachedLink[] | undefined)) return true;
+		if (checkLinks(cache.embeds as CachedLink[] | undefined)) return true;
 
 		return false;
 	}

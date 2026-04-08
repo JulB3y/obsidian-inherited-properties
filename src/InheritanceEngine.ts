@@ -1,52 +1,54 @@
-import { TFile } from "obsidian";
+import { App, MarkdownView, TFile } from "obsidian";
 import type { InheritedPropertiesSettings, InheritableProperty } from "./settings";
 import type { LinkDetector } from "./LinkDetector";
 import type InheritedPropertiesPlugin from "./main";
 
 export class InheritanceEngine {
+	private app: App;
 	private plugin: InheritedPropertiesPlugin;
 	private linkDetector: LinkDetector;
 
 	constructor(plugin: InheritedPropertiesPlugin, linkDetector: LinkDetector) {
+		this.app = plugin.app;
 		this.plugin = plugin;
 		this.linkDetector = linkDetector;
 	}
 
 	async handleFileCreation(file: TFile): Promise<void> {
-		if (file.extension !== "md") return;
+		try {
+			if (file.extension !== "md") return;
 
-		const settings = this.plugin.settings;
-		if (!settings.enabled) return;
+			const settings = this.plugin.settings;
+			if (!settings.enabled) return;
 
-		const parentFile = this.linkDetector.getLastActiveFile();
-		if (!parentFile || parentFile.path === file.path) return;
+			const parentFile = this.linkDetector.getLastActiveFile();
+			if (!parentFile || parentFile.path === file.path) return;
 
-		if (!this.linkDetector.hasLinkTo(parentFile, file)) return;
+			if (!this.linkDetector.hasLinkTo(parentFile, file)) return;
 
-		const content = await this.plugin.app.vault.read(file);
-		if (content.trim() !== "") return;
+			const content = await this.app.vault.read(file);
+			if (content.trim() !== "") return;
 
-		const parentFrontmatter = this.getParentFrontmatter(parentFile);
-		if (!parentFrontmatter) return;
+			const parentFrontmatter = this.getParentFrontmatter(parentFile);
+			if (!parentFrontmatter) return;
 
-		const propertiesToInherit = this.filterProperties(
-			parentFrontmatter,
-			settings.properties
-		);
-		if (Object.keys(propertiesToInherit).length === 0) return;
+			const propertiesToInherit = this.filterProperties(
+				parentFrontmatter,
+				settings.properties
+			);
+			if (Object.keys(propertiesToInherit).length === 0) return;
 
-		await this.writeFrontmatter(file, propertiesToInherit);
+			await this.writeFrontmatter(file, propertiesToInherit);
+			this.positionCursorAfterFrontmatter(file);
+		} catch (error) {
+			console.error("Inherited Properties: Error handling file creation", error);
+		}
 	}
 
 	private getParentFrontmatter(file: TFile): Record<string, unknown> | null {
-		const cache = this.plugin.app.metadataCache.getFileCache(file);
+		const cache = this.app.metadataCache.getFileCache(file);
 		if (!cache?.frontmatter) return null;
-
-		const { position, ...frontmatter } = cache.frontmatter as Record<
-			string,
-			unknown
-		> & { position: unknown };
-		return frontmatter;
+		return cache.frontmatter as Record<string, unknown>;
 	}
 
 	private filterProperties(
@@ -106,5 +108,28 @@ export class InheritanceEngine {
 		} catch (error) {
 			console.error("Inherited Properties: Failed to write frontmatter", error);
 		}
+	}
+
+	private positionCursorAfterFrontmatter(file: TFile): void {
+		window.setTimeout(() => {
+			const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+			if (!view || view.file?.path !== file.path) return;
+
+			const content = this.app.vault.read(file);
+			void content.then((text) => {
+				const lines = text.split("\n");
+				let dashCount = 0;
+				for (let i = 0; i < lines.length; i++) {
+					if (lines[i].trim() === "---") {
+						dashCount++;
+						if (dashCount === 2) {
+							const targetLine = i + 1;
+							view.editor.setCursor({ line: targetLine, ch: 0 });
+							return;
+						}
+					}
+				}
+			});
+		}, 50);
 	}
 }
