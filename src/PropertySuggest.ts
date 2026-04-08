@@ -25,5 +25,9 @@ export class PropertySuggest extends AbstractInputSuggest<string> {
 	selectSuggestion(value: string): void {
 		this.setValue(value);
 		this.inputEl.dispatchEvent(new Event("input", { bubbles: true }));
+		const next = this.inputEl.nextElementSibling;
+		if (next instanceof HTMLInputElement) {
+			next.focus();
+		}
 	}
 }
